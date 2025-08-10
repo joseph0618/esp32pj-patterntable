@@ -36,7 +36,7 @@ for frame in of_data:
         frame_dict[time] = {"fade": frame["fade"], "colors": {}}
     # For OF frames, we need to map them to the correct OF part names
     for i, of_key in enumerate(sorted(of_parts.keys(), key=lambda x: int(x[2:]))):
-        frame_dict[time]["colors"][of_key] = frame["color"]  \
+        frame_dict[time]["colors"][of_key] = frame["color"]
 
 # Sort frames by time
 sorted_times = sorted(frame_dict.keys())
@@ -50,29 +50,41 @@ output_lines.append(str(fps))  # fps
 # Create timing file content
 timing_lines = []
 
+def rgba_to_hex(rgb_a):
+    r, g, b, a = rgb_a
+    scale = a / 255
+    r = int(r * scale)
+    g = int(g * scale)
+    b = int(b * scale)
+    return f"{r:02x}{g:02x}{b:02x}"
+
 for t in sorted_times:
     frame = frame_dict[t]
     
-    # Add to main file: start_time fade
+    # Add fade line
     output_lines.append(f"{str(frame['fade']).lower()}")
     
-    # Add to timing file: just the start_time
+    # Add to timing file
     timing_lines.append(str(t))
     
-    # Add colors for each part in order
+    # Colors in one continuous string for the frame
+    color_str_parts = []
     for part in ordered_parts:
         rgba = frame["colors"].get(part)
         if rgba:
             if isinstance(rgba[0], list):  # LED strip: list of RGBA
                 for color in rgba:
-                    output_lines.append(" ".join(str(c) for c in color))
+                    color_str_parts.append(rgba_to_hex(color))
             else:  # OF: single RGBA
-                output_lines.append(" ".join(str(c) for c in rgba))
+                color_str_parts.append(rgba_to_hex(rgba))
         else:
-            # Default black for missing parts
+            # Default black
             length = led_parts[part]["len"] if "LED" in part else 1
             for _ in range(length):
-                output_lines.append("0 0 0 0")
+                color_str_parts.append("000000")
+    
+    # Join without spaces and append as one line
+    output_lines.append("".join(color_str_parts))
 
 # Save main file
 main_output_path = "lightdance_data.txt"
